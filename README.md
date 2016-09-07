@@ -3,12 +3,12 @@
 ***
 ## 模块介绍
 
-nginx_kafka_redis_module作为Nginx模块，其作用为连接Redis库，同步查询后，将HTTP的POST内容写入到kafka中。
+`nginx_kafka_redis_module`作为Nginx模块，其作用为截获HTTP的POST请求后根据参数查询Redis库，查询后将HTTP请求的POST内容写入到Kafka中。
 
 
-## 模块安装
+## 依赖
 
-该模块需依赖[librdkafka](https://github.com/edenhill/librdkafka)库以及[hiredis](https://github.com/redis/hiredis)库。
+该模块需依赖[librdkafka](https://github.com/edenhill/librdkafka)库（C\C++的Kafka接口库）以及[hiredis](https://github.com/redis/hiredis)库（C的Redis接口库）。
 
 ## Nginx conf配置
 
@@ -26,3 +26,5 @@ nginx_kafka_redis_module作为Nginx模块，其作用为连接Redis库，同步�
         		}
    		    }
   		 }
+
+
