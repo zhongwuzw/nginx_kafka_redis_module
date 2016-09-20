@@ -324,6 +324,7 @@ static void ngx_http_kafka_post_callback_handler(ngx_http_request_t *r)
     ngx_http_request_body_t     *body;
     ngx_http_kafka_main_conf_t  *main_conf = NULL;
     ngx_http_kafka_loc_conf_t   *local_conf;
+    int                         *is_in_kafka = 1;
     
     main_conf = ngx_http_get_module_main_conf(r, ngx_http_kafka_module);
     local_conf = ngx_http_get_module_loc_conf(r, ngx_http_kafka_module);
@@ -335,66 +336,13 @@ static void ngx_http_kafka_post_callback_handler(ngx_http_request_t *r)
         size_t redis_result_len = strlen(reply->str);
         freeReplyObject(reply);
         
-        if (redis_result_len) {
-            body = r->request_body;
-            if (body == NULL || body->bufs == NULL) {
-                ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
-                return;
-            }
-            
-            /* 获取post的body */
-            len = 0;
-            nbufs = 0;
-            in = body->bufs;
-            for (cl = in; cl != NULL; cl = cl->next) {
-                nbufs++;
-                len += (size_t)(cl->buf->last - cl->buf->pos);
-            }
-            
-            if (nbufs == 0) {
-                goto end;
-            }
-            
-            if (nbufs == 1 && ngx_buf_in_memory(in->buf)) {
-                
-                msg = in->buf->pos;
-                
-            } else {
-                
-                if ((msg = ngx_pnalloc(r->pool, len)) == NULL) {
-                    ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
-                    return;
-                }
-                
-                for (cl = in; cl != NULL; cl = cl->next) {
-                    if (ngx_buf_in_memory(cl->buf)) {
-                        msg = ngx_copy(msg, cl->buf->pos, cl->buf->last - cl->buf->pos);
-                    } else {
-                        /* TODO: handle buf in file */
-                        ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0,
-                                      "ngx_http_kafka_handler cannot handler in-file-post-buf");
-                        goto end;
-                    }
-                }
-                
-                msg -= len;
-                
-            }
-            
-            
-            if (local_conf->rkt == NULL) {
-                ngx_str_helper(&local_conf->topic, ngx_str_push);
-                local_conf->rkt = rd_kafka_topic_new(main_conf->rk,
-                                                     (const char *)local_conf->topic.data, local_conf->rktc);
-                ngx_str_helper(&local_conf->topic, ngx_str_pop);
-            }
-            
-            rd_kafka_produce(local_conf->rkt, RD_KAFKA_PARTITION_UA,
-                             RD_KAFKA_MSG_F_COPY, (void *)msg, len, NULL, 0, r->connection->log);
+        if (!redis_result_len) {
+            is_in_kafka = 0;
         }
         
     }
-    else{
+    
+    if (is_in_kafka) {
         body = r->request_body;
         if (body == NULL || body->bufs == NULL) {
             ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
@@ -450,6 +398,7 @@ static void ngx_http_kafka_post_callback_handler(ngx_http_request_t *r)
         rd_kafka_produce(local_conf->rkt, RD_KAFKA_PARTITION_UA,
                          RD_KAFKA_MSG_F_COPY, (void *)msg, len, NULL, 0, r->connection->log);
     }
+    
     
 end:
     
