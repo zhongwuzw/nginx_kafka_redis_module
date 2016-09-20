@@ -403,12 +403,15 @@ static void ngx_http_kafka_post_callback_handler(ngx_http_request_t *r)
 end:
     
     buf = ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
-    out.buf = buf;
-    out.next = NULL;
-    buf->pos = (u_char *)rc;
-    buf->last = (u_char *)rc + sizeof(rc) - 1;
-    buf->memory = 1;
-    buf->last_buf = 1;
+
+    if (buf) {
+        out.buf = buf;
+        out.next = NULL;
+        buf->pos = (u_char *)rc;
+        buf->last = (u_char *)rc + sizeof(rc) - 1;
+        buf->memory = 1;
+        buf->last_buf = 1;
+    }
     
     ngx_str_set(&(r->headers_out.content_type), "text/html");
     r->headers_out.status = NGX_HTTP_OK;
